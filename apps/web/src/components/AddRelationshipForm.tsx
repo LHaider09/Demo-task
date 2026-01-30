@@ -32,14 +32,17 @@ export function AddRelationshipForm({
     defaultValues: { parentId: "", childId: "" },
   });
 
-const { watch, formState } = form;
-const { isSubmitting } = formState;
+  const { watch, formState } = form;
+  const { isSubmitting } = formState;
 
-const childId = watch("childId");
+  const childId = watch("childId");
 
   const parentOptions = useMemo(() => {
-    // small UX: prevent selecting same person as both parent and child
-    return people.filter((p) => p.id !== childId);
+    // 1. Filter: Prevent selecting the same person as both parent and child
+    const filtered = people.filter((p) => p.id !== childId);
+    
+    // 2. Sort: Alphabetize the list for better UX
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [people, childId]);
 
   async function onSubmit(values: FormValues) {
@@ -69,7 +72,9 @@ const childId = watch("childId");
             </option>
           ))}
         </select>
-        {form.formState.errors.childId && <div className="fieldError">{form.formState.errors.childId.message}</div>}
+        {form.formState.errors.childId && (
+          <div className="fieldError">{form.formState.errors.childId.message}</div>
+        )}
 
         <label className="label">Parent</label>
         <select className="select" {...form.register("parentId")}>
@@ -81,7 +86,9 @@ const childId = watch("childId");
           ))}
         </select>
         <div className="hint">Max 2 parents</div>
-        {form.formState.errors.parentId && <div className="fieldError">{form.formState.errors.parentId.message}</div>}
+        {form.formState.errors.parentId && (
+          <div className="fieldError">{form.formState.errors.parentId.message}</div>
+        )}
 
         <button className="btn" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Adding..." : "Add Parent"}

@@ -2,9 +2,17 @@ import { prisma } from "../prisma";
 import { ApiError } from "../errors/apiError";
 import type { CreateRelationshipInput } from "../validation/relationships.schema";
 
-// helper: calculate age difference in years (simple & explainable)
-function yearsBetween(older: Date, younger: Date) {
-  return younger.getFullYear() - older.getFullYear();
+// FIX 1: Robust Age Calculation
+// Handles edge cases where the birthday hasn't happened yet in the current year.
+function getAgeDifference(older: Date, younger: Date) {
+  let age = younger.getFullYear() - older.getFullYear();
+  const m = younger.getMonth() - older.getMonth();
+
+  // If the younger person's birth month/day hasn't occurred yet in the relative year, subtract 1
+  if (m < 0 || (m === 0 && younger.getDate() < older.getDate())) {
+    age--;
+  }
+  return age;
 }
 
 export async function createRelationship(input: CreateRelationshipInput) {
@@ -25,8 +33,8 @@ export async function createRelationship(input: CreateRelationshipInput) {
     throw new ApiError(404, "PERSON_NOT_FOUND", "Parent or child was not found");
   }
 
-  // Rule: parent must be at least 15 years older
-  const diff = yearsBetween(parent.dateOfBirth, child.dateOfBirth);
+  // FIX 1 Usage: Check precise age difference
+  const diff = getAgeDifference(parent.dateOfBirth, child.dateOfBirth);
   if (diff < 15) {
     throw new ApiError(
       400,
@@ -44,33 +52,35 @@ export async function createRelationship(input: CreateRelationshipInput) {
     throw new ApiError(400, "TOO_MANY_PARENTS", "A person can have at most 2 parents");
   }
 
-  // Rule: prevent cycles (child cannot be ancestor of parent)
-  // Idea: walk upwards from parent via parents-of-parent.
-  // If we ever reach childId, adding this relation would create a cycle.
-  let currentId = parentId;
-
-  while (true) {
-    const rel = await prisma.relationship.findFirst({
-      where: { childId: currentId },
+  // FIX 2: Recursive Cycle Detection (DFS)
+  // We must check ALL ancestors, not just the first one found.
+  const checkForCycle = async (currentAncestorId: string, targetChildId: string) => {
+    // 1. Fetch all parents of the current ancestor
+    const parents = await prisma.relationship.findMany({
+      where: { childId: currentAncestorId },
+      select: { parentId: true },
     });
 
-    if (!rel) break;
-
-    if (rel.parentId === childId) {
-      throw new ApiError(400, "CYCLE", "This relationship would create a cycle");
+    for (const relation of parents) {
+      // If we encounter the targetChildId in the ancestry, it's a cycle
+      if (relation.parentId === targetChildId) {
+        throw new ApiError(400, "CYCLE", "This relationship would create a cycle");
+      }
+      // Recursive step: check this parent's parents
+      await checkForCycle(relation.parentId, targetChildId);
     }
+  };
 
-    currentId = rel.parentId;
-  }
+  // Start the check: Can 'childId' be found in 'parentId's ancestry?
+  await checkForCycle(parentId, childId);
 
-  // create relationship (unique constraint prevents duplicates)
+  // Create relationship
   try {
     const relationship = await prisma.relationship.create({
       data: { parentId, childId },
     });
     return relationship;
   } catch (err: any) {
-    // Prisma unique constraint error code is typically P2002
     if (err?.code === "P2002") {
       throw new ApiError(409, "DUPLICATE", "This relationship already exists");
     }
