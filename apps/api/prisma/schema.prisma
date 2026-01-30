@@ -1,0 +1,33 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Person {
+  id           String   @id @default(uuid())
+  name         String
+  dateOfBirth  DateTime
+  placeOfBirth String?
+  createdAt    DateTime @default(now())
+
+  parents      Relationship[] @relation("Parent")
+  children     Relationship[] @relation("Child")
+}
+
+model Relationship {
+  id        String   @id @default(uuid())
+  parentId  String
+  childId   String
+  createdAt DateTime @default(now())
+
+  parent    Person   @relation("Parent", fields: [parentId], references: [id], onDelete: Cascade)
+  child     Person   @relation("Child", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId])
+  @@index([childId])
+  @@index([parentId])
+}
