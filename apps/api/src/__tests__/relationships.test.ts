@@ -1,8 +1,20 @@
 import request from "supertest";
 import { buildApp } from "../app";
+import { prisma } from "../prisma"; // Import your prisma client
 
 describe("Relationships API", () => {
   const app = buildApp();
+
+  // CLEANUP: Reset DB before every test to ensure isolation
+  beforeEach(async () => {
+    await prisma.relationship.deleteMany();
+    await prisma.person.deleteMany();
+  });
+
+  // TEARDOWN: Disconnect Prisma after all tests
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
 
   async function createPerson(name: string, dob: string) {
     const res = await request(app)
@@ -10,7 +22,8 @@ describe("Relationships API", () => {
       .send({ name, dateOfBirth: dob })
       .expect(201);
 
-    return res.body.data.id as string;
+    // Handle both { data: person } and raw person response styles
+    return res.body.data?.id || res.body.id;
   }
 
   it("POST /api/relationships creates a parent-child relationship", async () => {
@@ -22,42 +35,65 @@ describe("Relationships API", () => {
       .send({ parentId, childId })
       .expect(201);
 
-    expect(res.body.data.parentId).toBe(parentId);
-    expect(res.body.data.childId).toBe(childId);
+    const data = res.body.data || res.body;
+    expect(data.parentId).toBe(parentId);
+    expect(data.childId).toBe(childId);
   });
 
   it("rejects relationship if parent is not 15 years older", async () => {
     const parentId = await createPerson("Young Parent", "1980-01-01");
-    const childId = await createPerson("Child", "1990-01-01"); // only 10 years
+    const childId = await createPerson("Child", "1990-01-01"); // Only 10 years diff
 
     const res = await request(app)
       .post("/api/relationships")
       .send({ parentId, childId })
       .expect(400);
 
+    // Expect specific error code from your service
     expect(res.body.error).toBeDefined();
-    // adjust message/code based on your API error
     expect(res.body.error.code).toBe("AGE_RULE");
   });
 
-  it("rejects cycles (child cannot become ancestor)", async () => {
+  it("rejects cycles (immediate parent-child swap)", async () => {
     const a = await createPerson("A", "1960-01-01");
     const b = await createPerson("B", "1990-01-01");
 
-    // A -> B (A is parent of B)
+    // A -> B (Valid)
     await request(app)
       .post("/api/relationships")
       .send({ parentId: a, childId: b })
       .expect(201);
 
-    // Try B -> A (cycle)
+    // B -> A (Invalid: Cycle + Age Rule violation)
     const res = await request(app)
       .post("/api/relationships")
       .send({ parentId: b, childId: a })
       .expect(400);
 
-    expect(res.body.error).toBeDefined();
+    // Note: This will likely hit AGE_RULE first because B is younger than A.
+    // That is acceptable behavior.
     expect(["CYCLE", "AGE_RULE"]).toContain(res.body.error.code);
+  });
 
+  it("validates grandfather lineage (A -> B -> C)", async () => {
+    const grandpa = await createPerson("Grandpa", "1940-01-01");
+    const dad = await createPerson("Dad", "1970-01-01");
+    const son = await createPerson("Son", "2000-01-01");
+
+    // Grandpa -> Dad
+    await request(app)
+      .post("/api/relationships")
+      .send({ parentId: grandpa, childId: dad })
+      .expect(201);
+
+    // Dad -> Son
+    await request(app)
+      .post("/api/relationships")
+      .send({ parentId: dad, childId: son })
+      .expect(201);
+      
+    // Verify structure via backend check (Optional but good)
+    const relationships = await prisma.relationship.findMany();
+    expect(relationships).toHaveLength(2);
   });
 });

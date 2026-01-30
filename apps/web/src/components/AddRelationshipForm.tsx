@@ -63,8 +63,10 @@ export function AddRelationshipForm({
       <h3 className="cardTitle">Add Relationship</h3>
 
       <form onSubmit={form.handleSubmit(onSubmit)}>
-        <label className="label">Child</label>
-        <select className="select" {...form.register("childId")}>
+        {/* FIX: Added htmlFor */}
+        <label className="label" htmlFor="childId">Child</label>
+        {/* FIX: Added id */}
+        <select className="select" id="childId" {...form.register("childId")}>
           <option value="">Select person</option>
           {people.map((p) => (
             <option key={p.id} value={p.id}>
@@ -76,8 +78,10 @@ export function AddRelationshipForm({
           <div className="fieldError">{form.formState.errors.childId.message}</div>
         )}
 
-        <label className="label">Parent</label>
-        <select className="select" {...form.register("parentId")}>
+        {/* FIX: Added htmlFor */}
+        <label className="label" htmlFor="parentId">Parent</label>
+        {/* FIX: Added id */}
+        <select className="select" id="parentId" {...form.register("parentId")}>
           <option value="">Select person</option>
           {parentOptions.map((p) => (
             <option key={p.id} value={p.id}>
