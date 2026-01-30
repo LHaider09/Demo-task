@@ -168,6 +168,11 @@ This project was built as a technical showcase, demonstrating:
 
 * Simple but extensible UI
 
+##  AI Usage & Approach
+I utilized AI tools (GitHub Copilot / ChatGPT) to accelerate development while maintaining full architectural ownership.
+* **Data Generation:** Generated JSON seed data for testing.
+* **Logic Refinement:** While AI suggested a basic cycle check, I manually implemented the **Recursive Depth-First Search (DFS)** to ensure it catches deep, multi-level cycles which the initial suggestion missed.
+
 ## Next Improvements
 
 * Visual tree layout (graph view)
@@ -179,3 +184,13 @@ This project was built as a technical showcase, demonstrating:
 * Pagination for large datasets
 
 * Authentication
+
+## Architecture Overview
+
+The application follows a simple layered architecture where the backend acts as the single source of truth.
+
+```mermaid
+graph TD
+    Frontend[React + TypeScript (Vite)] -->|HTTP (JSON)| Backend[Node.js + Express API]
+    Backend -->|Prisma ORM| DB[(SQLite Database)]
+```
