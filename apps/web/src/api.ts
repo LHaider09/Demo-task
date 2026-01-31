@@ -22,6 +22,13 @@ export type TreeNode = {
   children: TreeNode[];
 };
 
+export type ApiError = {
+  code: string;
+  message: string;
+  status: number;
+  details?: unknown;
+};
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -31,13 +38,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
   });
 
-  const body = await res.json();
+  // Some endpoints could return empty body, so be safe:
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : null;
 
   if (!res.ok) {
-    // backend returns { error: { code, message, details } }
-    const msg = body?.error?.message || "Request failed";
-    const code = body?.error?.code || "ERROR";
-    throw new Error(`${code}: ${msg}`);
+    // backend returns: { error: { code, message, details? } }
+    const err: ApiError = {
+      code: body?.error?.code ?? "ERROR",
+      message: body?.error?.message ?? "Request failed",
+      status: res.status,
+      details: body?.error?.details,
+    };
+    throw err;
   }
 
   return body as T;
@@ -47,7 +60,11 @@ export function getPeople() {
   return request<{ data: Person[] }>("/api/people");
 }
 
-export function createPerson(input: { name: string; dateOfBirth: string; placeOfBirth?: string }) {
+export function createPerson(input: {
+  name: string;
+  dateOfBirth: string;
+  placeOfBirth?: string;
+}) {
   return request<{ data: Person }>("/api/people", {
     method: "POST",
     body: JSON.stringify(input),

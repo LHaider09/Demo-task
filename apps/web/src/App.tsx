@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-import { ApiError } from "./api/api";
 import { usePeople } from "./hooks/usePeople";
 import { useTree } from "./hooks/useTree";
 
@@ -17,7 +16,14 @@ export default function App() {
   const { tree, loading: treeLoading, refreshTree } = useTree(rootId);
 
   const [info, setInfo] = useState("");
-  const [error, setError] = useState<ApiError | null>(null);
+
+  // Auto-hide success/info messages after 3 seconds
+  useEffect(() => {
+    if (!info) return;
+
+    const t = setTimeout(() => setInfo(""), 3000);
+    return () => clearTimeout(t);
+  }, [info]);
 
   // default root when people arrives
   useEffect(() => {
@@ -26,7 +32,6 @@ export default function App() {
 
   async function afterCreate() {
     const list = await refreshPeople();
-    // nice UX: auto-select newly created person (last item by createdAt if your API returns it sorted)
     if (list.length > 0) setRootId(list[list.length - 1].id);
   }
 
@@ -39,14 +44,26 @@ export default function App() {
       <h1 className="h1">Family Tree Builder</h1>
       <p className="subtitle">Create people and define parent–child relationships</p>
 
-      <Alert info={info} error={error} onClear={() => { setInfo(""); setError(null); }} />
+      <Alert info={info} error={null} onClear={() => setInfo("")} />
 
       <div className="grid">
         <div>
           <h2 className="sectionTitle">Create / Edit</h2>
-          <CreatePersonForm onCreated={afterCreate} setInfo={setInfo} setError={setError} />
+
+          <CreatePersonForm
+            onCreated={afterCreate}
+            setInfo={setInfo}
+            setError={() => {}}
+          />
+
           <div style={{ height: 16 }} />
-          <AddRelationshipForm people={people} onAdded={afterRelationship} setInfo={setInfo} setError={setError} />
+
+          <AddRelationshipForm
+            people={people}
+            onAdded={afterRelationship}
+            setInfo={setInfo}
+            setError={() => {}}
+          />
         </div>
 
         <div>

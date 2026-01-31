@@ -2,7 +2,7 @@ import { prisma } from "../prisma";
 import { ApiError } from "../errors/apiError";
 import type { CreateRelationshipInput } from "../validation/relationships.schema";
 
-// FIX 1: Robust Age Calculation
+
 // Handles edge cases where the birthday hasn't happened yet in the current year.
 function getAgeDifference(older: Date, younger: Date) {
   let age = younger.getFullYear() - older.getFullYear();
@@ -33,7 +33,7 @@ export async function createRelationship(input: CreateRelationshipInput) {
     throw new ApiError(404, "PERSON_NOT_FOUND", "Parent or child was not found");
   }
 
-  // FIX 1 Usage: Check precise age difference
+  //  Check precise age difference
   const diff = getAgeDifference(parent.dateOfBirth, child.dateOfBirth);
   if (diff < 15) {
     throw new ApiError(
@@ -52,7 +52,7 @@ export async function createRelationship(input: CreateRelationshipInput) {
     throw new ApiError(400, "TOO_MANY_PARENTS", "A person can have at most 2 parents");
   }
 
-  // FIX 2: Recursive Cycle Detection (DFS)
+  // Recursive Cycle Detection (DFS)
   // We must check ALL ancestors, not just the first one found.
   const checkForCycle = async (currentAncestorId: string, targetChildId: string) => {
     // 1. Fetch all parents of the current ancestor

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,33 +27,60 @@ export function AddRelationshipForm({
   setInfo: (msg: string) => void;
   setError: (e: any) => void;
 }) {
+  const [serverError, setServerError] = useState<string | null>(null);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { parentId: "", childId: "" },
   });
 
-  const { watch, formState } = form;
+  const { watch, formState, reset } = form;
   const { isSubmitting } = formState;
 
   const childId = watch("childId");
+  const parentId = watch("parentId");
+
+  // ✅ Clear backend error when user changes selection (best UX)
+  useEffect(() => {
+    if (serverError) setServerError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [childId, parentId]);
+
+  // ✅ Optional: auto-hide backend error after 5 seconds (nice polish)
+  useEffect(() => {
+    if (!serverError) return;
+    const t = setTimeout(() => setServerError(null), 5000);
+    return () => clearTimeout(t);
+  }, [serverError]);
 
   const parentOptions = useMemo(() => {
-    // 1. Filter: Prevent selecting the same person as both parent and child
+    // Prevent selecting the same person as both parent and child
     const filtered = people.filter((p) => p.id !== childId);
-    
-    // 2. Sort: Alphabetize the list for better UX
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Sort safely (copy array first)
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [people, childId]);
 
   async function onSubmit(values: FormValues) {
     setInfo("");
     setError(null);
+    setServerError(null);
 
     try {
       await createRelationship(values);
+
       setInfo("Relationship added");
+      reset(); // ✅ clear fields only on success
       await onAdded();
-    } catch (e) {
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.error?.message ??
+        e?.response?.data?.message ??
+        e?.message ??
+        "Failed to add relationship";
+
+      // ❌ do NOT reset here (keep user selections so they can fix)
+      setServerError(msg);
       setError(e);
     }
   }
@@ -63,9 +90,9 @@ export function AddRelationshipForm({
       <h3 className="cardTitle">Add Relationship</h3>
 
       <form onSubmit={form.handleSubmit(onSubmit)}>
-        {/* FIX: Added htmlFor */}
-        <label className="label" htmlFor="childId">Child</label>
-        {/* FIX: Added id */}
+        <label className="label" htmlFor="childId">
+          Child
+        </label>
         <select className="select" id="childId" {...form.register("childId")}>
           <option value="">Select person</option>
           {people.map((p) => (
@@ -78,9 +105,9 @@ export function AddRelationshipForm({
           <div className="fieldError">{form.formState.errors.childId.message}</div>
         )}
 
-        {/* FIX: Added htmlFor */}
-        <label className="label" htmlFor="parentId">Parent</label>
-        {/* FIX: Added id */}
+        <label className="label" htmlFor="parentId">
+          Parent
+        </label>
         <select className="select" id="parentId" {...form.register("parentId")}>
           <option value="">Select person</option>
           {parentOptions.map((p) => (
@@ -89,6 +116,7 @@ export function AddRelationshipForm({
             </option>
           ))}
         </select>
+
         <div className="hint">Max 2 parents</div>
         {form.formState.errors.parentId && (
           <div className="fieldError">{form.formState.errors.parentId.message}</div>
@@ -97,6 +125,12 @@ export function AddRelationshipForm({
         <button className="btn" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Adding..." : "Add Parent"}
         </button>
+
+        {serverError && (
+          <div className="fieldError" style={{ marginTop: "8px" }}>
+            {serverError}
+          </div>
+        )}
       </form>
     </div>
   );

@@ -1,17 +1,15 @@
 import request from "supertest";
 import { buildApp } from "../app";
-import { prisma } from "../prisma"; // Import your prisma client
+import { prisma } from "../prisma";
 
 describe("Relationships API", () => {
   const app = buildApp();
 
-  // CLEANUP: Reset DB before every test to ensure isolation
   beforeEach(async () => {
     await prisma.relationship.deleteMany();
     await prisma.person.deleteMany();
   });
 
-  // TEARDOWN: Disconnect Prisma after all tests
   afterAll(async () => {
     await prisma.$disconnect();
   });
@@ -69,9 +67,6 @@ describe("Relationships API", () => {
       .post("/api/relationships")
       .send({ parentId: b, childId: a })
       .expect(400);
-
-    // Note: This will likely hit AGE_RULE first because B is younger than A.
-    // That is acceptable behavior.
     expect(["CYCLE", "AGE_RULE"]).toContain(res.body.error.code);
   });
 
@@ -92,7 +87,6 @@ describe("Relationships API", () => {
       .send({ parentId: dad, childId: son })
       .expect(201);
       
-    // Verify structure via backend check (Optional but good)
     const relationships = await prisma.relationship.findMany();
     expect(relationships).toHaveLength(2);
   });

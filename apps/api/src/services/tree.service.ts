@@ -33,20 +33,17 @@ export async function getTree(rootId: string): Promise<TreeNode> {
     throw new ApiError(404, "PERSON_NOT_FOUND", "Root person not found");
   }
 
-  // 4. Recursive Builder (Synchronous & Fast)
   const buildNode = (currentId: string, depth: number): TreeNode => {
     // Safety check for infinite loops (though cycle detection in createRelationship prevents this)
     if (depth > 20) {
       throw new ApiError(400, "TREE_TOO_DEEP", "Tree is too deep");
     }
 
-    const person = personMap.get(currentId)!; // We know it exists from the map
+    const person = personMap.get(currentId)!;
     const childIds = childrenMap.get(currentId) || [];
 
-    // Recursively build children
     const children = childIds
       .map((cid) => buildNode(cid, depth + 1))
-      // Bonus: Sort children by age (Oldest to Youngest)
       .sort((a, b) => new Date(a.dateOfBirth).getTime() - new Date(b.dateOfBirth).getTime());
 
     return {

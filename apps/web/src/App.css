@@ -121,6 +121,7 @@ input:focus, select:focus{
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.05);
   color: var(--text);
+  margin-top: 16px;
   padding: 10px 12px;
   border-radius: 10px;
   cursor: pointer;
@@ -164,4 +165,8 @@ select {
 select option {
   background: #0b1220;
   color: #e5e7eb;
+}
+.fieldError {
+  color: #ff6b6b; /* soft red */
+  font-size: 0.9rem;
 }
