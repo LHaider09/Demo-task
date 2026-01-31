@@ -258,4 +258,4 @@ AI improved speed, but **correctness, performance, and design decisions remained
 
 ## UI Sanpshot(Optional)
 
-![Application UI](docs/ui.png)
+![Application UI](docs/UI.png)
