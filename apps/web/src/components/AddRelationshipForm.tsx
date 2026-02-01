@@ -40,13 +40,11 @@ export function AddRelationshipForm({
   const childId = watch("childId");
   const parentId = watch("parentId");
 
-  // ✅ Clear backend error when user changes selection (best UX)
   useEffect(() => {
     if (serverError) setServerError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId, parentId]);
 
-  // ✅ Optional: auto-hide backend error after 5 seconds (nice polish)
   useEffect(() => {
     if (!serverError) return;
     const t = setTimeout(() => setServerError(null), 5000);
@@ -70,7 +68,7 @@ export function AddRelationshipForm({
       await createRelationship(values);
 
       setInfo("Relationship added");
-      reset(); // ✅ clear fields only on success
+      reset(); 
       await onAdded();
     } catch (e: any) {
       const msg =
@@ -78,8 +76,6 @@ export function AddRelationshipForm({
         e?.response?.data?.message ??
         e?.message ??
         "Failed to add relationship";
-
-      // ❌ do NOT reset here (keep user selections so they can fix)
       setServerError(msg);
       setError(e);
     }
