@@ -90,4 +90,64 @@ describe("Relationships API", () => {
     const relationships = await prisma.relationship.findMany();
     expect(relationships).toHaveLength(2);
   });
+    it("rejects self-parent relationships", async () => {
+    const a = await createPerson("A", "1980-01-01");
+
+    const res = await request(app)
+      .post("/api/relationships")
+      .send({ parentId: a, childId: a })
+      .expect(400);
+
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe("SELF_PARENT");
+  });
+
+  it("rejects a third parent (max 2 parents rule)", async () => {
+    const p1 = await createPerson("Parent 1", "1960-01-01");
+    const p2 = await createPerson("Parent 2", "1961-01-01");
+    const p3 = await createPerson("Parent 3", "1962-01-01");
+    const child = await createPerson("Child", "1995-01-01");
+
+    // First parent OK
+    await request(app)
+      .post("/api/relationships")
+      .send({ parentId: p1, childId: child })
+      .expect(201);
+
+    // Second parent OK
+    await request(app)
+      .post("/api/relationships")
+      .send({ parentId: p2, childId: child })
+      .expect(201);
+
+    // Third parent should fail
+    const res = await request(app)
+      .post("/api/relationships")
+      .send({ parentId: p3, childId: child })
+      .expect(400);
+
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe("TOO_MANY_PARENTS");
+  });
+
+  it("rejects duplicate relationships (same parent-child twice)", async () => {
+    const parentId = await createPerson("Noah", "1960-01-01");
+    const childId = await createPerson("Emma", "1990-01-01");
+
+    // First time OK
+    await request(app)
+      .post("/api/relationships")
+      .send({ parentId, childId })
+      .expect(201);
+
+    // Second time should fail as DUPLICATE
+    const res = await request(app)
+      .post("/api/relationships")
+      .send({ parentId, childId })
+      .expect(409);
+
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe("DUPLICATE");
+  });
+
 });

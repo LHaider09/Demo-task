@@ -2,7 +2,6 @@ import { prisma } from "../prisma";
 import { ApiError } from "../errors/apiError";
 import type { CreateRelationshipInput } from "../validation/relationships.schema";
 
-
 // Handles edge cases where the birthday hasn't happened yet in the current year.
 function getAgeDifference(older: Date, younger: Date) {
   let age = younger.getFullYear() - older.getFullYear();
@@ -33,7 +32,7 @@ export async function createRelationship(input: CreateRelationshipInput) {
     throw new ApiError(404, "PERSON_NOT_FOUND", "Parent or child was not found");
   }
 
-  //  Check precise age difference
+  // Check precise age difference
   const diff = getAgeDifference(parent.dateOfBirth, child.dateOfBirth);
   if (diff < 15) {
     throw new ApiError(
@@ -43,19 +42,18 @@ export async function createRelationship(input: CreateRelationshipInput) {
     );
   }
 
-  // Rule: child can have max 2 parents
-  const existingParentsCount = await prisma.relationship.count({
-    where: { childId },
-  });
-
-  if (existingParentsCount >= 2) {
-    throw new ApiError(400, "TOO_MANY_PARENTS", "A person can have at most 2 parents");
-  }
-
-  // Recursive Cycle Detection (DFS)
+  // Recursive Cycle Detection (DFS) with visited set
   // We must check ALL ancestors, not just the first one found.
-  const checkForCycle = async (currentAncestorId: string, targetChildId: string) => {
-    // 1. Fetch all parents of the current ancestor
+  const checkForCycle = async (
+    currentAncestorId: string,
+    targetChildId: string,
+    visited: Set<string>
+  ) => {
+    // Prevent infinite recursion / repeated work
+    if (visited.has(currentAncestorId)) return;
+    visited.add(currentAncestorId);
+
+    // Fetch all parents of the current ancestor
     const parents = await prisma.relationship.findMany({
       where: { childId: currentAncestorId },
       select: { parentId: true },
@@ -67,20 +65,39 @@ export async function createRelationship(input: CreateRelationshipInput) {
         throw new ApiError(400, "CYCLE", "This relationship would create a cycle");
       }
       // Recursive step: check this parent's parents
-      await checkForCycle(relation.parentId, targetChildId);
+      await checkForCycle(relation.parentId, targetChildId, visited);
     }
   };
 
   // Start the check: Can 'childId' be found in 'parentId's ancestry?
-  await checkForCycle(parentId, childId);
+  await checkForCycle(parentId, childId, new Set<string>());
 
-  // Create relationship
+  // Create relationship (transaction makes "max 2 parents" race-safe)
   try {
-    const relationship = await prisma.relationship.create({
-      data: { parentId, childId },
+    const relationship = await prisma.$transaction(async (tx) => {
+      // Rule: child can have max 2 parents
+      const existingParentsCount = await tx.relationship.count({
+        where: { childId },
+      });
+
+      if (existingParentsCount >= 2) {
+        throw new ApiError(
+          400,
+          "TOO_MANY_PARENTS",
+          "A person can have at most 2 parents"
+        );
+      }
+
+      return tx.relationship.create({
+        data: { parentId, childId },
+      });
     });
+
     return relationship;
   } catch (err: any) {
+    // If we threw ApiError inside the transaction, rethrow it cleanly
+    if (err instanceof ApiError) throw err;
+
     if (err?.code === "P2002") {
       throw new ApiError(409, "DUPLICATE", "This relationship already exists");
     }

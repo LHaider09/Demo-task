@@ -167,6 +167,10 @@ select option {
   color: #e5e7eb;
 }
 .fieldError {
-  color: #ff6b6b; /* soft red */
+  color: #ff6b6b;
+  font-size: 0.9rem;
+}
+.fieldSuccess {
+  color: #4ade80; 
   font-size: 0.9rem;
 }

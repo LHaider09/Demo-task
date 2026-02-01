@@ -19,15 +19,14 @@ function label(p: Person) {
 export function AddRelationshipForm({
   people,
   onAdded,
-  setInfo,
   setError,
 }: {
   people: Person[];
   onAdded: () => Promise<void>;
-  setInfo: (msg: string) => void;
   setError: (e: any) => void;
 }) {
   const [serverError, setServerError] = useState<string | null>(null);
+  const [serverSuccess, setServerSuccess] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -40,34 +39,38 @@ export function AddRelationshipForm({
   const childId = watch("childId");
   const parentId = watch("parentId");
 
+  // ✅ Clear backend error when user changes selection (best UX)
   useEffect(() => {
     if (serverError) setServerError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId, parentId]);
 
+  // ✅ Optional: auto-hide backend error after 5 seconds (nice polish)
   useEffect(() => {
     if (!serverError) return;
     const t = setTimeout(() => setServerError(null), 5000);
     return () => clearTimeout(t);
   }, [serverError]);
 
-  const parentOptions = useMemo(() => {
-    // Prevent selecting the same person as both parent and child
-    const filtered = people.filter((p) => p.id !== childId);
+  // ✅ Auto-hide success after 3 seconds
+  useEffect(() => {
+    if (!serverSuccess) return;
+    const t = setTimeout(() => setServerSuccess(null), 3000);
+    return () => clearTimeout(t);
+  }, [serverSuccess]);
 
-    // Sort safely (copy array first)
+  const parentOptions = useMemo(() => {
+    const filtered = people.filter((p) => p.id !== childId);
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [people, childId]);
 
   async function onSubmit(values: FormValues) {
-    setInfo("");
     setError(null);
     setServerError(null);
+    setServerSuccess(null);
 
     try {
       await createRelationship(values);
-
-      setInfo("Relationship added");
       reset(); 
       await onAdded();
     } catch (e: any) {
@@ -121,6 +124,12 @@ export function AddRelationshipForm({
         <button className="btn" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Adding..." : "Add Parent"}
         </button>
+
+        {serverSuccess && (
+          <div className="fieldSuccess" style={{ marginTop: "8px" }}>
+            {serverSuccess}
+          </div>
+        )}
 
         {serverError && (
           <div className="fieldError" style={{ marginTop: "8px" }}>
