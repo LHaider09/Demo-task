@@ -1,4 +1,4 @@
-// src/utils/dates.ts
+
 export function isFutureDate(d: Date) {
   return d.getTime() > Date.now();
 }

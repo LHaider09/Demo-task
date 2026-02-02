@@ -16,7 +16,7 @@ export default function App() {
 
   const [info, setInfo] = useState("");
 
-  // Auto-hide success/info messages after 3 seconds
+  // Auto-hide success messages after 3 seconds
   useEffect(() => {
     if (!info) return;
 
