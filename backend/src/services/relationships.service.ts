@@ -2,12 +2,10 @@ import { prisma } from "../prisma";
 import { ApiError } from "../errors/apiError";
 import type { CreateRelationshipInput } from "../validation/relationships.schema";
 
-// Handles edge cases where the birthday hasn't happened yet in the current year.
 function getAgeDifference(older: Date, younger: Date) {
   let age = younger.getFullYear() - older.getFullYear();
   const m = younger.getMonth() - older.getMonth();
 
-  // If the younger person's birth month/day hasn't occurred yet in the relative year, subtract 1
   if (m < 0 || (m === 0 && younger.getDate() < older.getDate())) {
     age--;
   }
@@ -49,33 +47,26 @@ export async function createRelationship(input: CreateRelationshipInput) {
     targetChildId: string,
     visited: Set<string>
   ) => {
-    // Prevent infinite recursion / repeated work
     if (visited.has(currentAncestorId)) return;
     visited.add(currentAncestorId);
 
-    // Fetch all parents of the current ancestor
     const parents = await prisma.relationship.findMany({
       where: { childId: currentAncestorId },
       select: { parentId: true },
     });
 
     for (const relation of parents) {
-      // If we encounter the targetChildId in the ancestry, it's a cycle
       if (relation.parentId === targetChildId) {
         throw new ApiError(400, "CYCLE", "This relationship would create a cycle");
       }
-      // Recursive step: check this parent's parents
       await checkForCycle(relation.parentId, targetChildId, visited);
     }
   };
 
-  // Start the check: Can 'childId' be found in 'parentId's ancestry?
   await checkForCycle(parentId, childId, new Set<string>());
 
-  // Create relationship (transaction makes "max 2 parents" race-safe)
   try {
     const relationship = await prisma.$transaction(async (tx) => {
-      // Rule: child can have max 2 parents
       const existingParentsCount = await tx.relationship.count({
         where: { childId },
       });
@@ -95,7 +86,6 @@ export async function createRelationship(input: CreateRelationshipInput) {
 
     return relationship;
   } catch (err: any) {
-    // If we threw ApiError inside the transaction, rethrow it cleanly
     if (err instanceof ApiError) throw err;
 
     if (err?.code === "P2002") {

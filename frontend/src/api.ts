@@ -38,12 +38,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
   });
 
-  // Some endpoints could return empty body, so be safe:
   const text = await res.text();
   const body = text ? JSON.parse(text) : null;
 
   if (!res.ok) {
-    // backend returns: { error: { code, message, details? } }
     const err: ApiError = {
       code: body?.error?.code ?? "ERROR",
       message: body?.error?.message ?? "Request failed",

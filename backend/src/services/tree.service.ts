@@ -4,20 +4,17 @@ import { ApiError } from "../errors/apiError";
 export type TreeNode = {
   id: string;
   name: string;
-  dateOfBirth: string; // ISO string
+  dateOfBirth: string;
   placeOfBirth?: string | null;
   children: TreeNode[];
 };
 
 export async function getTree(rootId: string): Promise<TreeNode> {
-  // 1. Fetch ALL data in just 2 queries (O(1) database load)
-  // For a "mini" app, fetching all rows is much faster than N+1 recursive queries.
   const [allPeople, allRelations] = await Promise.all([
     prisma.person.findMany(),
     prisma.relationship.findMany(),
   ]);
 
-  // 2. Create Lookup Maps for O(1) access
   const personMap = new Map(allPeople.map((p) => [p.id, p]));
   const childrenMap = new Map<string, string[]>();
 
@@ -27,14 +24,11 @@ export async function getTree(rootId: string): Promise<TreeNode> {
     }
     childrenMap.get(rel.parentId)?.push(rel.childId);
   }
-
-  // 3. Verify Root Exists
   if (!personMap.has(rootId)) {
     throw new ApiError(404, "PERSON_NOT_FOUND", "Root person not found");
   }
 
   const buildNode = (currentId: string, depth: number): TreeNode => {
-    // Safety check for infinite loops (though cycle detection in createRelationship prevents this)
     if (depth > 20) {
       throw new ApiError(400, "TREE_TOO_DEEP", "Tree is too deep");
     }

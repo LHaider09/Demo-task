@@ -1,4 +1,4 @@
-// src/controllers/relationships.controller.ts
+
 import type { Request, Response } from "express";
 import * as relationshipsService from "../services/relationships.service";
 import { asyncHandler } from "../utils/asyncHandler";

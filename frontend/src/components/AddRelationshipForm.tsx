@@ -38,14 +38,10 @@ export function AddRelationshipForm({
 
   const childId = watch("childId");
   const parentId = watch("parentId");
-
-  // ✅ Clear backend error when user changes selection (best UX)
   useEffect(() => {
     if (serverError) setServerError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId, parentId]);
 
-  // ✅ Optional: auto-hide backend error after 5 seconds (nice polish)
   useEffect(() => {
     if (!serverError) return;
     const t = setTimeout(() => setServerError(null), 5000);

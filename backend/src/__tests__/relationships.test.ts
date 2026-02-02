@@ -54,7 +54,6 @@ describe("Relationships API", () => {
     const oldId = await createPerson("Old", "1950-01-01");
     const youngId = await createPerson("Young", "1990-01-01");
 
-    // Seed invalid relationship directly (bypass API) to prove cycle detection works
     await prisma.relationship.create({
       data: { parentId: youngId, childId: oldId },
     });

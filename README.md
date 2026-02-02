@@ -46,8 +46,8 @@ The application follows a simple layered architecture where the backend acts as 
 
 ### Description
 
-- The **Frontend** (React + TypeScript) Frontend calls backend via HTTP / JSON
-- The **Backend** (Node.js + Express) Backend enforces validation & business rules
+- The **Frontend** (React + TypeScript) calls backend via HTTP / JSON
+- The **Backend** (Node.js + Express) enforces validation & business rules
 - The **Database** SQLite persists people and relationships
 - Prisma is used for database access
 
@@ -93,39 +93,33 @@ All relationship rules are enforced in the backend:
 | Date of birth is required and cannot be in the future | (validated when creating person) |
 
 
-## Running the Application Locally
-Prerequisites
+## Running the Application
 
-* Node.js v18+
+### Run with Docker
 
-* npm
-
-1️⃣ Backend (API)
-```bash
-cd backend
-npm install
-npx prisma migrate dev
-npm run dev
-```
-
-The API will start at:
-
-http://localhost:4000
-
-2️⃣ Frontend: 
+#### Prerequisites
+- Docker + Docker Compose
 
 ```bash
-cd frontend
-npm install
-npm run dev
+docker compose up --build
 ```
 
 The UI will be available at:
 
 http://localhost:5173
 
+The backend will be availabe at:
+
+http://localhost:4000/
+
 Notes:
-- No external services required
+- Docker installs dependencies inside containers, so the app runs even without local installs.
+To remove VS Code/TypeScript red squiggles, install dependencies locally once:
+
+```bash
+cd backend && npm install
+cd ../frontend && npm install
+```
 
 - SQLite database is created locally via Prisma
 
@@ -241,28 +235,20 @@ All tests should pass
 - Tree view is rendered recursively for clarity and simplicity.
 - SQLite + Prisma chosen for fast local setup and predictable relational integrity.
 
-## AI Usage & Approach
+## AI Usage
 
 **Tools used:** ChatGPT, GitHub Copilot
 
-AI was used as a productivity aid to speed up routine work (not to make final design decisions). I used it mainly for:
-- generating initial scaffolding for schemas and request/response shapes
-- suggesting test scenarios and edge cases
-- speeding up small refactors and repetitive edits
+AI was used to speed up routine work (scaffolding, small refactors, and generating test/edge-case ideas).  
+All key logic and design decisions were implemented and verified by me, including cycle prevention (DFS ancestor check) and consistent server-side validation.  
+I validated behavior by running automated tests and manually exercising the main UI flows.
 
-I validated all rules against the assignment requirements and implemented the critical logic myself:
-- cycle prevention via recursive DFS ancestor traversal
-- consistent server-side validation so the backend remains the source of truth
-
-I verified changes by running automated tests and manually checking key flows in the UI.  
-AI accelerated delivery, but correctness and architectural decisions were fully mine.
 
 
 ## What I would do with more time
 
 - **Visual tree layout:** Replace list rendering with a simple graph/DAG visualization.
 - **Edit / delete flows:** Add safe mutation operations with validation to prevent breaking existing relationships.
-- **Docker:** Add Dockerfiles for API and Web + docker-compose for one-command local startup.
 - **Accessibility:** Improve keyboard navigation, focus states, and screen-reader labels.
 - **Scalability:** Add pagination or lazy-loading for large datasets.
 - **Rate limiting:** Add per-IP limits for write endpoints and return `429 Too Many Requests`.
