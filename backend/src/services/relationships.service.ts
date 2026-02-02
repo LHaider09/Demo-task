@@ -40,8 +40,6 @@ export async function createRelationship(input: CreateRelationshipInput) {
     );
   }
 
-  // Recursive Cycle Detection (DFS) with visited set
-  // We must check ALL ancestors, not just the first one found.
   const checkForCycle = async (
     currentAncestorId: string,
     targetChildId: string,

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getTreeByRoot } from "../controller/tree.controller"; // or ../controllers/...
+import { getTreeByRoot } from "../controller/tree.controller"; 
 
 export const treeRouter = Router();
 

@@ -4,7 +4,6 @@ import "./App.css";
 import { usePeople } from "./hooks/usePeople";
 import { useTree } from "./hooks/useTree";
 
-import { Alert } from "./components/Alert";
 import { CreatePersonForm } from "./components/CreatePersonForm";
 import { AddRelationshipForm } from "./components/AddRelationshipForm";
 import { FamilyTreeView } from "./components/FamilyTreeView";
@@ -43,9 +42,6 @@ export default function App() {
     <div className="container">
       <h1 className="h1">Family Tree Builder</h1>
       <p className="subtitle">Create people and define parent–child relationships</p>
-
-      <Alert info={info} error={null} onClear={() => setInfo("")} />
-
       <div className="grid">
         <div>
           <h2 className="sectionTitle">Create / Edit</h2>
@@ -61,7 +57,6 @@ export default function App() {
           <AddRelationshipForm
             people={people}
             onAdded={afterRelationship}
-            setInfo={setInfo}
             setError={() => {}}
           />
         </div>

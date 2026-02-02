@@ -41,7 +41,6 @@ export function CreatePersonForm({
     return () => clearTimeout(t);
   }, [successMsg]);
 
-  //  Clear backend error when user edits any field 
   const name = form.watch("name");
   const dob = form.watch("dateOfBirth");
   const pob = form.watch("placeOfBirth");

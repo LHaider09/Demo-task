@@ -6,8 +6,8 @@ import { createRelationship } from "../api/api";
 import type { Person } from "../api/type";
 
 const schema = z.object({
-  parentId: z.string().uuid("Select a parent"),
-  childId: z.string().uuid("Select a child"),
+  parentId: z.uuid("Select a parent"),
+  childId: z.uuid("Select a child"),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -48,7 +48,7 @@ export function AddRelationshipForm({
     return () => clearTimeout(t);
   }, [serverError]);
 
-  // ✅ Auto-hide success after 3 seconds
+  // Auto-hide success after 3 seconds
   useEffect(() => {
     if (!serverSuccess) return;
     const t = setTimeout(() => setServerSuccess(null), 3000);

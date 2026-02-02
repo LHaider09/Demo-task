@@ -110,19 +110,17 @@ http://localhost:5173
 
 The backend will be availabe at:
 
-http://localhost:4000/
+http://localhost:4000
 
 Notes:
-- Docker installs dependencies inside containers, so the app runs even without local installs.
-To remove VS Code/TypeScript red squiggles, install dependencies locally once:
 
+- SQLite database is created locally via Prisma.
+
+-VS Code note: if you open the repo without installing dependencies locally, TypeScript may show red squiggles. Fix once:
 ```bash
-cd backend && npm install
+cd backend && npm install && npx prisma generate
 cd ../frontend && npm install
 ```
-
-- SQLite database is created locally via Prisma
-
 
 ## API Overview
 
