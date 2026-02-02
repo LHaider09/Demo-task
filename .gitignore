@@ -35,3 +35,12 @@ dist-ssr/
 *.sw?
 # Archives
 *.zip
+# Test coverage
+coverage/
+
+# Vite cache
+.vite/
+
+# SQLite variations
+*.sqlite
+*.sqlite3

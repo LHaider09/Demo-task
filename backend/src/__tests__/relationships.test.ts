@@ -20,7 +20,6 @@ describe("Relationships API", () => {
       .send({ name, dateOfBirth: dob })
       .expect(201);
 
-    // Handle both { data: person } and raw person response styles
     return res.body.data?.id || res.body.id;
   }
 
@@ -47,27 +46,27 @@ describe("Relationships API", () => {
       .send({ parentId, childId })
       .expect(400);
 
-    // Expect specific error code from your service
     expect(res.body.error).toBeDefined();
     expect(res.body.error.code).toBe("AGE_RULE");
   });
 
-  it("rejects cycles (immediate parent-child swap)", async () => {
-    const a = await createPerson("A", "1960-01-01");
-    const b = await createPerson("B", "1990-01-01");
+  it("rejects a cycle if DB already contains a reverse edge (defensive)", async () => {
+    const oldId = await createPerson("Old", "1950-01-01");
+    const youngId = await createPerson("Young", "1990-01-01");
 
-    // A -> B (Valid)
-    await request(app)
-      .post("/api/relationships")
-      .send({ parentId: a, childId: b })
-      .expect(201);
+    // Seed invalid relationship directly (bypass API) to prove cycle detection works
+    await prisma.relationship.create({
+      data: { parentId: youngId, childId: oldId },
+    });
 
-    // B -> A (Invalid: Cycle + Age Rule violation)
+    // Now adding valid edge closes the loop => should trigger CYCLE
     const res = await request(app)
       .post("/api/relationships")
-      .send({ parentId: b, childId: a })
+      .send({ parentId: oldId, childId: youngId })
       .expect(400);
-    expect(["CYCLE", "AGE_RULE"]).toContain(res.body.error.code);
+
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe("CYCLE");
   });
 
   it("validates grandfather lineage (A -> B -> C)", async () => {
@@ -75,22 +74,21 @@ describe("Relationships API", () => {
     const dad = await createPerson("Dad", "1970-01-01");
     const son = await createPerson("Son", "2000-01-01");
 
-    // Grandpa -> Dad
     await request(app)
       .post("/api/relationships")
       .send({ parentId: grandpa, childId: dad })
       .expect(201);
 
-    // Dad -> Son
     await request(app)
       .post("/api/relationships")
       .send({ parentId: dad, childId: son })
       .expect(201);
-      
+
     const relationships = await prisma.relationship.findMany();
     expect(relationships).toHaveLength(2);
   });
-    it("rejects self-parent relationships", async () => {
+
+  it("rejects self-parent relationships", async () => {
     const a = await createPerson("A", "1980-01-01");
 
     const res = await request(app)
@@ -108,19 +106,16 @@ describe("Relationships API", () => {
     const p3 = await createPerson("Parent 3", "1962-01-01");
     const child = await createPerson("Child", "1995-01-01");
 
-    // First parent OK
     await request(app)
       .post("/api/relationships")
       .send({ parentId: p1, childId: child })
       .expect(201);
 
-    // Second parent OK
     await request(app)
       .post("/api/relationships")
       .send({ parentId: p2, childId: child })
       .expect(201);
 
-    // Third parent should fail
     const res = await request(app)
       .post("/api/relationships")
       .send({ parentId: p3, childId: child })
@@ -134,13 +129,11 @@ describe("Relationships API", () => {
     const parentId = await createPerson("Noah", "1960-01-01");
     const childId = await createPerson("Emma", "1990-01-01");
 
-    // First time OK
     await request(app)
       .post("/api/relationships")
       .send({ parentId, childId })
       .expect(201);
 
-    // Second time should fail as DUPLICATE
     const res = await request(app)
       .post("/api/relationships")
       .send({ parentId, childId })
@@ -149,5 +142,4 @@ describe("Relationships API", () => {
     expect(res.body.error).toBeDefined();
     expect(res.body.error.code).toBe("DUPLICATE");
   });
-
 });

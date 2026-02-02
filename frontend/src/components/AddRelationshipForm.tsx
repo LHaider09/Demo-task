@@ -64,25 +64,29 @@ export function AddRelationshipForm({
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [people, childId]);
 
-  async function onSubmit(values: FormValues) {
-    setError(null);
-    setServerError(null);
-    setServerSuccess(null);
+async function onSubmit(values: FormValues) {
+  setError(null);
+  setServerError(null);
+  setServerSuccess(null);
 
-    try {
-      await createRelationship(values);
-      reset(); 
-      await onAdded();
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.error?.message ??
-        e?.response?.data?.message ??
-        e?.message ??
-        "Failed to add relationship";
-      setServerError(msg);
-      setError(e);
-    }
+  try {
+    await createRelationship(values);
+
+    setServerSuccess("Relationship added successfully");
+
+    reset();
+    await onAdded();
+  } catch (e: any) {
+    const msg =
+      e?.response?.data?.error?.message ??
+      e?.response?.data?.message ??
+      e?.message ??
+      "Failed to add relationship";
+    setServerError(msg);
+    setError(e);
   }
+}
+
 
   return (
     <div className="card">

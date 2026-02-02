@@ -14,7 +14,8 @@ export function useTree(rootId: string) {
     setLoading(true);
     try {
       const res = await getTree(rootId);
-      setTree(res.data);
+      const treeNode = (res as any).data ?? res; // ✅ works for both formats
+      setTree(treeNode as TreeNode);
     } finally {
       setLoading(false);
     }
